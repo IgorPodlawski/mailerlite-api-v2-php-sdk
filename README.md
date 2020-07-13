@@ -20,10 +20,6 @@ Then you will need to run this simple command using CLI:
 composer require mailerlite/mailerlite-api-v2-php-sdk
 ```
 
-##### Manual (preferable for shared hostings)
-
-This way is preferable only if you are using shared hosting and do not have a possibility to use Composer. You will need to download [this archive](https://bit.ly/ml-php-sdk-0_1_10), extract it and place its contents in root folder of your project. The next step is the same as using Composer, you will need to require `vendor/autoload.php` file in your index.php and lets dive in!
-
 ## Usage examples
 
 #### Groups API
@@ -48,6 +44,60 @@ $singleGroup = $groupsApi->find($groupId); // returns single item object
 $subscribers = $groupsApi->getSubscribers($groupId); // get subscribers who belongs to selected group
 
 $subscribers = $groupsApi->getSubscribers($groupId, 'unsubscribed'); // get unsubscribed subscribers who belongs to selected group
+```
+
+#### Simple example of Subscribers API usage (adding single person to newsletter list)
+
+```php
+<?php
+
+// array holding allowed Origin domains
+$allowedOrigins = array(
+  '(http(s)://)?(www\.)?yourdomain\.com',
+  'localhost'
+);
+ 
+if (isset($_SERVER['HTTP_ORIGIN']) && $_SERVER['HTTP_ORIGIN'] != '') {
+  foreach ($allowedOrigins as $allowedOrigin) {
+    if (preg_match('#' . $allowedOrigin . '#', $_SERVER['HTTP_ORIGIN'])) {
+      header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+      header('Content-Type: application/json; charset=utf-8');
+      break;
+    }
+  }
+}
+
+function returnMessage($code, $message) {
+  echo json_encode([
+    'code' => $code,
+    'message' => $message,
+  ]);
+}
+
+try
+{
+  require 'vendor/autoload.php';
+	$subscribersApi = (new \MailerLiteApi\MailerLite('your-api-key'))->subscribers();
+
+  $data = json_decode(file_get_contents('php://input'), true);
+  $email = $data['email'];
+
+  $subscriber = [
+    'email' => $email
+  ];
+
+  $addedSubscriber = $subscribersApi->create($subscriber);
+
+  if($addedSubscriber->email) {
+    returnMessage(200, 'Thank you for signing to our newsletter!');
+  } else {
+    returnMessage($addedSubscriber->status, 'There was an error' . $addedSubscriber->error->message);
+  }
+}
+catch (Exception $e)
+{
+  returnMessage($e->code, 'There was an error while adding to a newsletter: ' . $e->getMessage());
+}
 ```
 
 #### Use multiple APIs at once
